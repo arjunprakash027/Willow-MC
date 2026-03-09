@@ -1,75 +1,24 @@
-import argparse
-import json
+"""
+This module has transformations to convert raw json to proper ball by ball dataset. This however does not have any feature sets
+"""
 import os
-import uuid
-import warnings
 import zipfile
+import json
 import hashlib
-import requests
-from collections import defaultdict
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
+from collections import defaultdict
 
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from joblib import Parallel, delayed
 from tqdm import tqdm
-
-# Suppress warnings for cleaner output
-warnings.filterwarnings('ignore')
+from dagster import asset, MaterializeResult
+from dagster_duckdb import DuckDBResource
 
 class CricketDataCurator:
-    """
-    Handles the curation of cricket match JSON data into structured formats and 
-    provides visualization tools for deep analytics.
-    """
-
-    def __init__(self, input_dir: str, output_dir: str):
+    def __init__(self, input_dir: str):
         self.input_dir = Path(input_dir)
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.input_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Set visualization styles
-        try:
-            plt.style.use('seaborn-v0_8-whitegrid')
-        except:
-            plt.style.use('ggplot')
-        sns.set_context("notebook", font_scale=1.1)
-        sns.set_palette("tab10")
-
-    def download_and_extract(self, url: str = "https://cricsheet.org/downloads/t20s_male_json.zip"):
-        """
-        Downloads and extracts the latest data from Cricsheet.
-        """
-        print(f"\n🌐 FETCHING LATEST DATA FROM CRICSHEET")
-        print(f"=======================================")
-        
-        zip_path = self.input_dir / "temp_data.zip"
-        
-        print(f"Downloading: {url}")
-        response = requests.get(url, stream=True)
-        total_size = int(response.headers.get('content-length', 0))
-        
-        with open(zip_path, "wb") as f, tqdm(
-            desc="Downloading",
-            total=total_size,
-            unit='iB',
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as bar:
-            for data in response.iter_content(chunk_size=1024):
-                size = f.write(data)
-                bar.update(size)
-
-        print(f"Extracting to: {self.input_dir}")
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(self.input_dir)
-        
-        os.remove(zip_path)
-        print(f"✅ Download and extraction complete.")
 
     def create_team_mapping(self, df: pd.DataFrame) -> pd.DataFrame:
         if 'team' not in df.columns:
@@ -103,7 +52,6 @@ class CricketDataCurator:
         info = match_data.get('info', {})
         meta = self._get_match_metadata(info)
         
-        # Deterministic match_id based on match metadata
         unique_str = f"{meta['teams']}_{meta['date']}_{meta['venue']}"
         match_id = hashlib.sha256(unique_str.encode()).hexdigest()[:15]
         team1 = meta['teams'][0] if len(meta['teams']) > 0 else 'Unknown'
@@ -144,7 +92,6 @@ class CricketDataCurator:
                     wickets = delivery.get('wickets', [])
                     is_wicket = len(wickets) > 0
                     
-                    # Store state BEFORE the delivery
                     row = {
                         'match_id': match_id,
                         'season': meta['season'],
@@ -182,7 +129,6 @@ class CricketDataCurator:
                     }
                     dataset.append(row)
 
-                    # Update state AFTER delivery
                     current_runs += runs_total
                     if is_wicket: wickets_lost += len(wickets)
                     if is_legal: legal_balls += 1
@@ -209,61 +155,37 @@ class CricketDataCurator:
     def curate(self, n_jobs: int = -1) -> pd.DataFrame:
         files = [str(f) for f in self.input_dir.glob("*.json")]
         if not files:
-            print(f"❌ No JSON files found in {self.input_dir}. Use --download if needed.")
             return pd.DataFrame()
 
-        results = Parallel(n_jobs=n_jobs, backend='multiprocessing')(
+        results = Parallel(n_jobs=n_jobs)(
             delayed(self.process_file)(fp) for fp in tqdm(files, desc="Curating matches")
         )
 
         all_data = [row for match in results if match for row in match]
         df = pd.DataFrame(all_data)
         df = self.create_team_mapping(df)
-        
-        output_path = self.output_dir / "dls_dataset.parquet"
-        df.to_parquet(output_path, compression='zstd', index=False)
-        
-        print(f"\n✅ Curation Complete:")
-        print(f"• Processed {len([r for r in results if r])} matches")
-        print(f"• Generated {len(df):,} data points")
-        
-        # Recent Match Stats
-        if not df.empty:
-            # Drop duplicates to get unique matches with their metadata
-            metadata_cols = ['match_id', 'date', 'team', 'opponent', 'venue', 'city']
-            match_meta = df[metadata_cols].drop_duplicates('match_id')
-            match_meta['date_dt'] = pd.to_datetime(match_meta['date'], errors='coerce')
-            latest_match = match_meta.sort_values('date_dt', ascending=False).iloc[0]
-            
-            location = f" at {latest_match['venue']}"
-            if latest_match['city'] and latest_match['city'] != 'Unknown City':
-                location += f", {latest_match['city']}"
-                
-            print(f"• Most Recent Match: {latest_match['team']} vs {latest_match['opponent']} ({latest_match['date']}){location}")
-
-        print(f"• Saved to: {output_path}")
-        
         return df
 
-def main():
-    parser = argparse.ArgumentParser(description="Clean and Visualize Cricket Match Data")
-    parser.add_argument("--download", action="store_true", help="Download latest T20 data from Cricsheet")
-    parser.add_argument("--input", type=str, 
-                        default="data/raw",
-                        help="Input JSON directory")
-    parser.add_argument("--output", type=str, 
-                        default="data/processed",
-                        help="Output directory")
-    parser.add_argument("--jobs", type=int, default=-1, help="Parallel jobs")
+@asset(deps=['raw_data'], group_name="silver", compute_kind="python")
+def curate_dataset(context, duckdb: DuckDBResource):
+    zip_path = "data/raw/t20s_male_json.zip"
     
-    args = parser.parse_args()
-    
-    curator = CricketDataCurator(args.input, args.output)
-    
-    if args.download:
-        curator.download_and_extract()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        context.log.info(f"Extracting zip to {temp_dir}...")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+            
+        curator = CricketDataCurator(temp_dir)
+        df = curator.curate(n_jobs=-1)
         
-    curator.curate(n_jobs=args.jobs)
-
-if __name__ == "__main__":
-    main()
+        context.log.info(f"Generated {len(df)} ball-by-ball records. Saving to DuckDB...")
+        
+        with duckdb.get_connection() as conn:
+            conn.execute("CREATE OR REPLACE TABLE ball_by_ball AS SELECT * FROM df")
+            
+    return MaterializeResult(
+        metadata={
+            "total_rows": len(df),
+            "table_name": "ball_by_ball"
+        }
+    )

@@ -10,3 +10,7 @@ pyarrow
 statsmodels
 scikit-learn
 scipy
+dagster
+dagster-webserver
+duckdb
+dagster-duckdb

@@ -211,3 +211,6 @@ data/
 *.json
 !run_model_coeffs.json
 !wicket_model_coeffs.json
+
+*.db
+*.ipynb

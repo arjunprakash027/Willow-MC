@@ -1,46 +1,41 @@
 # Willow-MC 🏏
 
-An end-to-end stochastic cricket forecasting pipeline. Features high-frequency ingestion, situational state-transition modeling, and a Monte Carlo inference engine for real-time win probability simulation.
+A stochastic cricket forecasting pipeline and real-time arbitrage monitor.
 
-## 🛠 Features
-- **Data Curation**: Automated download and processing of Cricsheet T20 data.
-- **Modeling**: Negative Binomial (runs) and Logistic Regression (wickets) models.
-- **Simulation**: Monte Carlo inference engine for ball-by-ball win probability.
-- **Monitoring**: Live match monitoring via Cricbuzz API with real-time Polymarket price comparison.
+## 🏗 Architecture
 
-## 🚀 Setup
+- **Orchestration**: [Dagster](https://dagster.io/) pipelines for data ingestion and transformation.
+- **Data Storage**: [DuckDB](https://duckdb.org/) for high-performance, in-process analytical queries.
+- **Modeling**: Negative Binomial (runs) and Logistic Regression (wickets).
+- **Inference**: Monte Carlo simulation engine for ball-by-ball win probabilities.
+- **Live Trading**: Real-time Cricbuzz ingestion and Polymarket orderbook monitoring via Redis.
 
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 🚀 Quickstart
 
-2. **Redis Setup**:
-   The live monitor requires a Redis server for Polymarket orderbook streams.
-   ```bash
-   # Example: Start redis locally
-   redis-server
-   ```
-
-## 📊 Usage
-
-### 1. Data Curation
-Download and transform raw JSON match data into a structured Parquet dataset:
+**1. Install Dependencies**
 ```bash
-python curate_dataset.py --download --input data/raw --output data/processed
+uv pip install -r requirements.txt
 ```
 
-### 2. Live Monitoring & Inference
-Monitor a live match and compare predicted win probabilities with market prices:
+**2. Data Pipeline (Dagster)**
+Launch the orchestrator to download Cricsheet data, parse the matches, and populate DuckDB.
 ```bash
-# Usage: python minimal_monitor.py <CRICBUZZ_MATCH_ID> <REDIS_IP>
-python minimal_monitor.py 100001 localhost
+dagster dev -m orchestrator
+```
+Open `http://localhost:3000` to materialize the assets:
+*   `raw_data` (Bronze): Downloads zip archives.
+*   `curate_dataset` (Silver): Transforms JSONs into a ball-by-ball DuckDB table.
+*   `next_n_balls_features` (Gold): Generates N-ball state features for ML.
+
+**3. Live Monitor**
+Run the real-time inference engine against live market prices. *(Requires Redis)*
+```bash
+# Usage: python minimal_monitor.py <match_id> [redis_ip] [slug]
+python minimal_monitor.py 100001 localhost crint-ind-nzl-2026-03-08
 ```
 
-## 📂 Project Structure
-- `curate_dataset.py`: ETL pipeline for match data.
-- `minimal_monitor.py`: Real-time inference and market monitoring.
-- `notebooks/`: Research and model training (Monte Carlo, Poisson/Negative Binomial).
-- `run_model_coeffs.json`: Pre-trained coefficients for run prediction.
-- `wicket_model_coeffs.json`: Pre-trained coefficients for wicket prediction.
-- `requirements.txt`: Project dependencies.
+## 📂 Structure
+*   `orchestrator/`: Dagster definitions, resources, and DuckDB-backed assets.
+*   `notebooks/`: Research, Monte Carlo simulations, and model training.
+*   `minimal_monitor.py`: The live terminal UI for inference vs. markets.
+*   `data/willow.db`: DuckDB persistent storage (generated automatically).
