@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+./notebooks
+data/
+*.parquet
+*.json
+!run_model_coeffs.json
+!wicket_model_coeffs.json

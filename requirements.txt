@@ -1,0 +1,12 @@
+pandas
+numpy
+matplotlib
+seaborn
+joblib
+tqdm
+requests
+redis
+pyarrow
+statsmodels
+scikit-learn
+scipy
