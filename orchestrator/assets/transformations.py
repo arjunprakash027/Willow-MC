@@ -177,6 +177,9 @@ def curate_dataset(context, duckdb: DuckDBResource):
             
         curator = CricketDataCurator(temp_dir)
         df = curator.curate(n_jobs=-1)
+        df['date_dt'] = pd.to_datetime(df['date'], errors='coerce')
+        latest_idx = df['date_dt'].idxmax()
+        latest_match = df.loc[latest_idx]
         
         context.log.info(f"Generated {len(df)} ball-by-ball records. Saving to DuckDB...")
         
@@ -186,6 +189,8 @@ def curate_dataset(context, duckdb: DuckDBResource):
     return MaterializeResult(
         metadata={
             "total_rows": len(df),
-            "table_name": "ball_by_ball"
+            "latest_match": f"{latest_match['team']} vs {latest_match['opponent']}",
+            "latest_match_date": str(latest_match['date']),
+            "venue": latest_match['venue']
         }
     )
