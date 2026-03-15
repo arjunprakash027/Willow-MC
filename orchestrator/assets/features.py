@@ -48,22 +48,27 @@ def compute_next_n_balls_features(df: pd.DataFrame, total_balls: int, n_balls: i
             
     return pd.DataFrame(rows)
 
-@asset(deps=['curate_dataset'], group_name="gold", compute_kind="python")
-def next_n_balls_features_t20(context, duckdb: DuckDBResource):
+def compute_features(duckdb: DuckDBResource, table_name: str, total_balls: int, n_balls: int = 6):
     with duckdb.get_connection() as conn:
-        df = conn.execute("SELECT * FROM ball_by_ball").fetchdf()
+        df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
 
-    train_df = compute_next_n_balls_features(df, total_balls=120)
-
-    context.log.info(f"Generated {len(train_df)} features for T20...")
+    train_df = compute_next_n_balls_features(df, total_balls=total_balls, n_balls=n_balls)
     
     with duckdb.get_connection() as conn:
-        conn.execute("CREATE OR REPLACE TABLE next_n_balls_features_t20 AS SELECT * FROM train_df")
+        conn.execute(f"CREATE OR REPLACE TABLE next_n_balls_features_{table_name} AS SELECT * FROM train_df")
 
     return MaterializeResult(
         metadata={
             "total_rows": len(train_df),
-            "table_name": "next_n_balls_features_t20",
-            "n_balls": 6
+            "table_name": f"next_n_balls_features_{table_name}",
+            "n_balls": n_balls
         }
     )
+
+@asset(deps=['curate_t20_dataset'], group_name="gold", compute_kind="python")
+def next_n_balls_features_t20(context, duckdb: DuckDBResource):
+    return compute_features(duckdb, "t20_ball_by_ball", 120)
+
+@asset(deps=['curate_odi_dataset'], group_name="gold", compute_kind="python")
+def next_n_balls_features_odi(context, duckdb: DuckDBResource):
+    return compute_features(duckdb, "odi_ball_by_ball", 300)

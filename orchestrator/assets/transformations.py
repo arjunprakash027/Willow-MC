@@ -17,8 +17,9 @@ from dagster import asset, MaterializeResult
 from dagster_duckdb import DuckDBResource
 
 class CricketDataCurator:
-    def __init__(self, input_dir: str):
+    def __init__(self, input_dir: str, total_balls: int = 120):
         self.input_dir = Path(input_dir)
+        self.total_balls = total_balls
 
     def create_team_mapping(self, df: pd.DataFrame) -> pd.DataFrame:
         if 'team' not in df.columns:
@@ -108,7 +109,7 @@ class CricketDataCurator:
                         'toss_win_match_team': (meta['toss_winner'] == team),
                         'over_number': over_num,
                         'ball_in_over': (legal_balls % 6) + 1,
-                        'balls_remaining': max(0, 120 - legal_balls),
+                        'balls_remaining': max(0, self.total_balls - legal_balls),
                         'legal_balls_bowled': int(legal_balls),
                         'wickets_in_hand': int(10 - wickets_lost),
                         'current_score': int(current_runs),
@@ -119,7 +120,7 @@ class CricketDataCurator:
                         'runs_off_ball': int(runs_batter),
                         'total_runs_ball': int(runs_total),
                         'is_dot': 1 if runs_total == 0 else 0,
-                        'is_six': 1 if runs_batter == 6 else 0,
+                        'is_six': 1 if runs_batter >= 6 else 0,
                         'is_boundary': 1 if runs_batter >= 4 else 0,
                         'is_wicket': 1 if is_wicket else 0,
                         'phase': 'powerplay' if over_num < 6 else ('middle' if over_num < 16 else 'death'),
@@ -166,16 +167,13 @@ class CricketDataCurator:
         df = self.create_team_mapping(df)
         return df
 
-@asset(deps=['raw_data'], group_name="silver", compute_kind="python")
-def curate_dataset(context, duckdb: DuckDBResource):
-    zip_path = "data/raw/t20s_male_json.zip"
-    
+def run_curation_pipeline(context, duckdb: DuckDBResource, zip_path: str, table_name: str, total_balls: int):
     with tempfile.TemporaryDirectory() as temp_dir:
         context.log.info(f"Extracting zip to {temp_dir}...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(temp_dir)
             
-        curator = CricketDataCurator(temp_dir)
+        curator = CricketDataCurator(temp_dir, total_balls=total_balls)
         df = curator.curate(n_jobs=-1)
         df['date_dt'] = pd.to_datetime(df['date'], errors='coerce')
         latest_idx = df['date_dt'].idxmax()
@@ -184,13 +182,26 @@ def curate_dataset(context, duckdb: DuckDBResource):
         context.log.info(f"Generated {len(df)} ball-by-ball records. Saving to DuckDB...")
         
         with duckdb.get_connection() as conn:
-            conn.execute("CREATE OR REPLACE TABLE ball_by_ball AS SELECT * FROM df")
+            conn.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
             
     return MaterializeResult(
         metadata={
             "total_rows": len(df),
             "latest_match": f"{latest_match['team']} vs {latest_match['opponent']}",
             "latest_match_date": str(latest_match['date']),
-            "venue": latest_match['venue']
+            "venue": latest_match['venue'],
+            "table_name": table_name
         }
+    )
+
+@asset(deps=['raw_data_t20'], group_name="silver", compute_kind="python")
+def curate_t20_dataset(context, duckdb: DuckDBResource):
+    return run_curation_pipeline(
+        context, duckdb, "data/raw/t20s_male_json.zip", "t20_ball_by_ball", 120
+    )
+
+@asset(deps=['raw_data_odi'], group_name="silver", compute_kind="python")
+def curate_odi_dataset(context, duckdb: DuckDBResource):
+    return run_curation_pipeline(
+        context, duckdb, "data/raw/odis_json.zip", "odi_ball_by_ball", 300
     )
