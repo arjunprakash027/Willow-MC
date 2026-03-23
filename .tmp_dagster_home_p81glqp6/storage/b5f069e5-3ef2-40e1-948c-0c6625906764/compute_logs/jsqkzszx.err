@@ -1,0 +1,38 @@
+[32m2026-03-23 19:16:33 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - b5f069e5-3ef2-40e1-948c-0c6625906764 - 41389 - LOGS_CAPTURED - Started capturing logs in process (pid: 41389).
+[32m2026-03-23 19:16:33 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - b5f069e5-3ef2-40e1-948c-0c6625906764 - 41389 - backtest_t20_model - STEP_START - Started execution of step "backtest_t20_model".
+[32m2026-03-23 19:18:16 +0000[0m - dagster - [34mERROR[0m - [31m__ASSET_JOB - b5f069e5-3ef2-40e1-948c-0c6625906764 - 41389 - backtest_t20_model - STEP_FAILURE - Execution of step "backtest_t20_model" failed.
+
+dagster._core.errors.DagsterExecutionStepExecutionError: Error occurred while executing op "backtest_t20_model"::
+
+_duckdb.IOException: IO Error: Could not set lock on file "/Users/arjunprakashrao/Drive/projects/Willow-MC/data/willow.db": Conflicting lock is held in /Users/arjunprakashrao/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/bin/python3.12 (PID 38266) by user arjunprakashrao. See also https://duckdb.org/docs/stable/connect/concurrency
+
+Stack Trace:
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/dagster/_core/execution/plan/utils.py", line 57, in op_execution_error_boundary
+    yield
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/dagster/_utils/__init__.py", line 394, in iterate_with_context
+    next_output = next(iterator)
+                  ^^^^^^^^^^^^^^
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/dagster/_core/execution/plan/compute_generator.py", line 135, in _coerce_op_compute_fn_to_iterator
+    result = invoke_compute_fn(
+             ^^^^^^^^^^^^^^^^^^
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/dagster/_core/execution/plan/compute_generator.py", line 115, in invoke_compute_fn
+    return fn(context, **args_to_pass) if context_arg_provided else fn(**args_to_pass)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/orchestrator/assets/backtesting.py", line 97, in backtest_t20_model
+    matches = select_matches_for_backtest(duckdb, n_matches=10)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/orchestrator/assets/backtesting.py", line 81, in select_matches_for_backtest
+    with duckdb.get_connection() as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/arjunprakashrao/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/dagster_duckdb/resource.py", line 62, in get_connection
+    conn = backoff(
+           ^^^^^^^^
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/dagster/_utils/backoff.py", line 74, in backoff
+    raise to_raise
+  File "/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/dagster/_utils/backoff.py", line 68, in backoff
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+[0m
