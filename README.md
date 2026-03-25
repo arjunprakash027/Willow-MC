@@ -1,41 +1,88 @@
 # Willow-MC 🏏
 
-A stochastic cricket forecasting pipeline and real-time arbitrage monitor.
+A high-fidelity, stochastic cricket forecasting engine, live match probability monitor, and comprehensive data pipeline powered by Dagster, DuckDB, and Monte Carlo methods.
 
-## 🏗 Architecture
+---
 
-- **Orchestration**: [Dagster](https://dagster.io/) for modular ingestion, transformation, and modeling.
-- **Data Storage**: [DuckDB](https://duckdb.org/) analytical database for ball-by-ball records and feature storage.
-- **Modeling**: Negative Binomial (runs) and Logistic Regression (wickets), persisted as JSON coefficients.
-- **Inference**: High-fidelity Monte Carlo engine for simulating match outcomes.
-- **Trading**: Real-time arbitrage monitoring across Cricbuzz and Polymarket.
+## 📖 Overview
+
+Willow-MC moves beyond static, rule-based cricket forecasting by simulating the remaining balls of a match thousands of times using dynamically parameterized statistical models. It natively incorporates match state (wickets in hand, required run rates, overs remaining) to forecast outcomes. 
+
+The system consists of three main components:
+1. **The Orchestration Pipeline**: Ingests historical ball-by-ball data, engineers predictive features, trains regression models, and executes parallel backtesting.
+2. **The Monte Carlo Engine (`src/predictor.py`)**: A pure, stateless class that simulates game states using the modeled distributions.
+3. **The Live Terminal Monitor**: A CLI tool that polls live data from Cricbuzz and passes it into the engine to calculate real-time, second-by-second win probabilities.
+
+---
+
+## ➗ The Mathematics
+
+The Monte Carlo engine relies on passing the current match state (Runs, Wickets, legal balls, target) into two core components that project individual ball outcomes:
+
+- **Run Generation (Negative Binomial)**: Generating the number of runs scored off an expected delivery is modeled as a Negative Binomial distribution. Features like Current Run Rate (CRR), Required Run Rate (RRR), and Wickets in Hand influence the `mu` (mean) and `alpha` dispersion parameters.
+- **Wicket Probability (Logistic Regression)**: The probability of a wicket falling on any given ball is calculated via a Logit link, scaling aggressively during high RRR chases or "death" over scenarios where teams must take immense risks.
+
+By sampling these distributions thousands of times (`n_sims=5000`), the engine produces a dense, converged probability of victory or projected 1st innings score.
+
+---
+
+## 🏗 System Architecture
+
+- **Orchestration**: [Dagster](https://dagster.io/) is used for defining and visualizing the data pipeline assets.
+- **Data Warehousing**: [DuckDB](https://duckdb.org/) is leveraged as a ridiculously fast, embedded analytical database storing millions of historical records.
+- **Concurrency**: Parallelization via `joblib` allows for massive, concurrent back-testing of historical games. 
+
+---
 
 ## 🚀 Quickstart
 
-**1. Install Dependencies**
+### 1. Installation
+Clone the repository and install the dependencies using `uv` (or `pip`):
 ```bash
 uv pip install -r requirements.txt
 ```
 
-**2. Data Pipeline (Dagster)**
+### 2. Run the Dagster Pipeline
+Boot the pipeline orchestration UI to manage historical data and train networks:
 ```bash
-# Start the dev server and open http://localhost:3000
 dagster dev -m orchestrator
 ```
-Materialize the assets in order:
-*   `raw_data` (Bronze): Downloads latest Cricsheet ball-by-ball data.
-*   `curate_dataset` (Silver): Parses match JSONs into structured DuckDB tables.
-*   `next_n_balls_features_t20` (Gold): Parameterized feature engineering for T20 format.
-*   `t20_balls_model` & `t20_wickets_model`: Statistical training with statsmodels, exporting to `outputs/`.
+*(Navigates to http://localhost:3000)*
 
-**3. Live Monitor**
+Materialize the assets in the following order:
+1. **Bronze (`raw_data`)**: Pulls the master ball-by-ball datasets from Cricsheet.
+2. **Silver (`curate_dataset`)**: Parses chaotic JSONs and dumps them structured into DuckDB tables.
+3. **Gold (`next_n_balls_features_t20`)**: Computes contextual window metrics (features) per ball.
+4. **Modeling (`t20_balls_model` & `t20_wickets_model`)**: Fits the data via `statsmodels` to find optimal coefficients, which are persisted as `.json` files in the `outputs/` directory.
+
+### 3. Backtesting
+You can execute the `backtesting` asset group directly from Dagster. 
+This utilizes `joblib.Parallel` utilizing threads to massively sample historical DuckDB matches. It computes the **Mean Squared Error (MSE)** dynamically across the 6 major phases of a T20 Match:
+- **First Innings**: Powerplay (1-6), Middle (7-15), Death (16-20)
+- **Second Innings**: Powerplay (1-6), Middle (7-15), Death (16-20)
+
+### 4. Real-time Live Monitor
+Once your models are built and generated in the `outputs/` folder, run the live probability monitor against an ongoing match. You will need the Cricbuzz match ID (found in their URL):
 ```bash
-# Usage: python minimal_monitor.py <match_id> [redis_ip] [slug]
-python minimal_monitor.py 100001 localhost crint-ind-nzl-2026-03-08
+# Example: python minimal_monitor.py <match_id>
+python minimal_monitor.py 100001
 ```
 
-## 📂 Structure
-*   `orchestrator/assets/`: Modular assets for `ingestion`, `transformations`, `features`, and `models`.
-*   `outputs/`: Generated model coefficients (.json) used for live inference.
-*   `minimal_monitor.py`: Real-time terminal UI for market vs. model edge.
-*   `data/willow.db`: Persistent DuckDB storage for the entire history of cricket.
+---
+
+## 📂 Project Structure
+
+```text
+Willow-MC/
+├── src/
+│   └── predictor.py         # The core Monte Carlo class `WinPredictor`. Decoupled from any live API.
+├── orchestrator/
+│   ├── assets/              # Dagster modular assets for modeling, features, and backtesting.
+│   └── __init__.py          # Definition of Dagster jobs/schedules.
+├── notebooks/               # Jupyter workbooks for exploratory analysis and ad-hoc queries.
+├── data/                    # Local embedded DB files (willow.db via DuckDB).
+├── outputs/                 # Exported JSON model coefficients required by the predictor.
+├── minimal_monitor.py       # Live match tracking CLI. Polling Cricbuzz state -> `WinPredictor`.
+├── requirements.txt         # Project runtime dependencies.
+└── README.md
+```
