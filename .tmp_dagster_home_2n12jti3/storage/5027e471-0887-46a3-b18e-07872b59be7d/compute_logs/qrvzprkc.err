@@ -1,0 +1,5 @@
+[32m2026-03-28 14:29:05 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46340 - LOGS_CAPTURED - Started capturing logs in process (pid: 46340).
+[32m2026-03-28 14:29:05 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46340 - t20_wickets_model - STEP_START - Started execution of step "t20_wickets_model".
+[32m2026-03-28 14:29:06 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46340 - t20_wickets_model - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
+[32m2026-03-28 14:29:06 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46340 - t20_wickets_model - ASSET_MATERIALIZATION - Materialized value t20_wickets_model.
+[32m2026-03-28 14:29:06 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46340 - t20_wickets_model - STEP_SUCCESS - Finished execution of step "t20_wickets_model" in 710ms.
