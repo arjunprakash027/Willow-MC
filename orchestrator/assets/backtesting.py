@@ -1,16 +1,9 @@
 import os
 import sys
-import duckdb
 import numpy as np
-import zipfile
-import json
-import hashlib
-import tempfile
-from pathlib import Path
-from typing import Dict, List, Optional
-from collections import defaultdict
+from typing import Dict
+from src.predictor import WinPredictor
 
-import pandas as pd
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from dagster import asset, MaterializeResult
@@ -20,12 +13,11 @@ project_root = os.path.abspath(os.path.join(os.getcwd(), '..'))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from src.predictor import WinPredictor
 
-def single_match_prediction(duckdb: DuckDBResource ,match_id: str, predictor: WinPredictor) -> Dict:
+def single_match_prediction(duckdb: DuckDBResource ,match_id: str, predictor: WinPredictor, dataset: str) -> Dict:
 
     with duckdb.get_connection() as conn:
-        df = conn.execute("SELECT * FROM t20_ball_by_ball WHERE match_id = ?", [match_id]).fetchdf()
+        df = conn.execute(f"SELECT * FROM {dataset} WHERE match_id = ?", [match_id]).fetchdf()
     
     in1_final = df[df['innings'] == 1]['final_total'].iloc[0]
     in2_final = df[df['innings'] == 2]['final_total'].iloc[0]
@@ -77,12 +69,12 @@ def single_match_prediction(duckdb: DuckDBResource ,match_id: str, predictor: Wi
 
     return {stage: np.mean(errors) if errors else None for stage, errors in errors_by_stage.items()}
 
-def select_matches_for_backtest(duckdb: DuckDBResource, n_matches: int = 1000):
+def select_matches_for_backtest(duckdb: DuckDBResource, n_matches: int = 1000, dataset: str = None):
     with duckdb.get_connection() as conn:
         # Get matches that have exactly 2 innings (no super overs, not washed out in 1st innings)
-        query = """
+        query = f"""
             SELECT match_id 
-            FROM t20_ball_by_ball 
+            FROM {dataset}
             GROUP BY match_id 
             HAVING MAX(innings) = 2
         """
@@ -90,13 +82,12 @@ def select_matches_for_backtest(duckdb: DuckDBResource, n_matches: int = 1000):
     
     return matches['match_id'].sample(n=n_matches).tolist()
 
-@asset(deps=['t20_balls_model'], group_name="backtesting", compute_kind="python")
-def backtest_t20_model(context, duckdb: DuckDBResource):
+def backtest_models(context, duckdb: DuckDBResource, run_model_path: str, wicket_model_path: str, dataset: str):
 
-    predictor = WinPredictor(run_model_path="outputs/t20_int_run_model_coeffs.json", wicket_model_path="outputs/t20_int_wicket_model_coeffs.json")
-    matches = select_matches_for_backtest(duckdb, n_matches=10)
+    predictor = WinPredictor(run_model_path=run_model_path, wicket_model_path=wicket_model_path)
+    matches = select_matches_for_backtest(duckdb, n_matches=10, dataset=dataset)
     
-    results = Parallel(n_jobs=4, prefer='threads')(delayed(single_match_prediction)(duckdb, match_id, predictor) for match_id in tqdm(matches, desc="Backtesting T20 Model"))
+    results = Parallel(n_jobs=4, prefer='threads')(delayed(single_match_prediction)(duckdb, match_id, predictor, dataset) for match_id in tqdm(matches, desc=f"Backtesting {dataset}"))
     
     avg_errors = {stage: np.mean([r[stage] for r in results if r[stage] is not None]) for stage in results[0].keys()}
     
@@ -106,4 +97,25 @@ def backtest_t20_model(context, duckdb: DuckDBResource):
             "total_matches": len(matches)
         }
     )
+
+@asset(deps=['t20_balls_model', 't20_wickets_model'], group_name="backtesting", compute_kind="python")
+def backtest_t20_model(context, duckdb: DuckDBResource):
+
+    return backtest_models(
+        context,
+        duckdb,
+        "outputs/t20_int_run_model_coeffs.json",
+        "outputs/t20_int_wicket_model_coeffs.json",
+        "t20_ball_by_ball"
+    )
     
+@asset(deps=['ipl_balls_model', 'ipl_wickets_model'], group_name="backtesting", compute_kind="python")
+def backtest_ipl_model(context, duckdb: DuckDBResource):
+
+    return backtest_models(
+        context,
+        duckdb,
+        "outputs/t20_ipl_run_model_coeffs.json",
+        "outputs/t20_ipl_wicket_model_coeffs.json",
+        "ipl_ball_by_ball"
+    )

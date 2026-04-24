@@ -72,3 +72,7 @@ def next_n_balls_features_t20(context, duckdb: DuckDBResource):
 @asset(deps=['curate_odi_dataset'], group_name="gold", compute_kind="python")
 def next_n_balls_features_odi(context, duckdb: DuckDBResource):
     return compute_features(duckdb, "odi_ball_by_ball", 300)
+
+@asset(deps=['curate_ipl_dataset'], group_name="gold", compute_kind="python")
+def next_n_balls_features_ipl(context, duckdb:DuckDBResource):
+    return compute_features(duckdb, "ipl_ball_by_ball", 120)

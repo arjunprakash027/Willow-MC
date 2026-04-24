@@ -56,3 +56,20 @@ def raw_data_odi(context):
         }
     )
     
+@asset(group_name="bronze", compute_kind="python")
+def raw_data_ipl(context):
+    """
+    Downloads latest IPL data from cricsheet
+    """
+
+    url = "https://cricsheet.org/downloads/ipl_json.zip"
+    target_path, file_size, url = download_data(url, "ipl_json.zip")
+    
+    return MaterializeResult(
+        metadata={
+            "file_path": target_path,
+            "file_size": file_size,
+            "source_url": url,
+            "download_timestamp": time.time(),
+        }
+    )

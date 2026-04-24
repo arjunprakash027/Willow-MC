@@ -86,3 +86,11 @@ def odi_balls_model(context, duckdb: DuckDBResource):
 @asset(deps=['next_n_balls_features_odi'], group_name="models", compute_kind="python")
 def odi_wickets_model(context, duckdb: DuckDBResource):
     return train_wickets_model(duckdb, "next_n_balls_features_odi_ball_by_ball", "odi_int")
+
+@asset(deps=['next_n_balls_features_ipl'], group_name="models", compute_kind="python")
+def ipl_balls_model(context, duckdb: DuckDBResource):
+    return train_runs_model(duckdb, "next_n_balls_features_ipl_ball_by_ball", "t20_ipl")
+
+@asset(deps=['next_n_balls_features_ipl'], group_name="models", compute_kind="python")
+def ipl_wickets_model(context, duckdb: DuckDBResource):
+    return train_wickets_model(duckdb, "next_n_balls_features_ipl_ball_by_ball", "t20_ipl")

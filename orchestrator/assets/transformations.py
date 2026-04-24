@@ -205,3 +205,9 @@ def curate_odi_dataset(context, duckdb: DuckDBResource):
     return run_curation_pipeline(
         context, duckdb, "data/raw/odis_json.zip", "odi_ball_by_ball", 300
     )
+
+@asset(deps=['raw_data_ipl'], group_name='silver', compute_kind="python")
+def curate_ipl_dataset(context, duckdb: DuckDBResource):
+    return run_curation_pipeline(
+        context, duckdb, "data/raw/ipl_json.zip", "ipl_ball_by_ball", 120
+    )
