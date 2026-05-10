@@ -13,8 +13,8 @@ if getattr(sys, 'frozen', False):
 else:
     COEFF_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-RUN_MODEL = f"{COEFF_ROOT}/outputs/t20_int_run_model_coeffs.json"
-WICKET_MODEL = f"{COEFF_ROOT}/outputs/t20_int_wicket_model_coeffs.json"
+RUN_MODEL = f"{COEFF_ROOT}/outputs/t20_ipl_run_model_coeffs.json"
+WICKET_MODEL = f"{COEFF_ROOT}/outputs/t20_ipl_wicket_model_coeffs.json"
 
 @dataclass
 class MatchState:

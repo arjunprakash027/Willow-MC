@@ -1,6 +1,0 @@
-[32m2026-03-28 14:29:11 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46368 - LOGS_CAPTURED - Started capturing logs in process (pid: 46368).
-[32m2026-03-28 14:29:11 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46368 - backtest_t20_model - STEP_START - Started execution of step "backtest_t20_model".
-Backtesting T20 Model:   0%|          | 0/10 [00:00<?, ?it/s]Backtesting T20 Model:  80%|████████  | 8/10 [00:01<00:00,  6.49it/s]Backtesting T20 Model: 100%|██████████| 10/10 [00:01<00:00,  8.11it/s]
-[32m2026-03-28 14:29:15 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46368 - backtest_t20_model - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
-[32m2026-03-28 14:29:15 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46368 - backtest_t20_model - ASSET_MATERIALIZATION - Materialized value backtest_t20_model.
-[32m2026-03-28 14:29:15 +0000[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5027e471-0887-46a3-b18e-07872b59be7d - 46368 - backtest_t20_model - STEP_SUCCESS - Finished execution of step "backtest_t20_model" in 3.42s.

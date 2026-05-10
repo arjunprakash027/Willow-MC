@@ -85,7 +85,7 @@ def select_matches_for_backtest(duckdb: DuckDBResource, n_matches: int = 1000, d
 def backtest_models(context, duckdb: DuckDBResource, run_model_path: str, wicket_model_path: str, dataset: str):
 
     predictor = WinPredictor(run_model_path=run_model_path, wicket_model_path=wicket_model_path)
-    matches = select_matches_for_backtest(duckdb, n_matches=10, dataset=dataset)
+    matches = select_matches_for_backtest(duckdb, n_matches=100, dataset=dataset)
     
     results = Parallel(n_jobs=4, prefer='threads')(delayed(single_match_prediction)(duckdb, match_id, predictor, dataset) for match_id in tqdm(matches, desc=f"Backtesting {dataset}"))
     

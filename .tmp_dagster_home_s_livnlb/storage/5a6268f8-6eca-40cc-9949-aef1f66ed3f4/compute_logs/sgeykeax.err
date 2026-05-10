@@ -1,0 +1,9 @@
+[32m2026-05-10 12:05:55 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5a6268f8-6eca-40cc-9949-aef1f66ed3f4 - 9297 - LOGS_CAPTURED - Started capturing logs in process (pid: 9297).
+[32m2026-05-10 12:05:55 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5a6268f8-6eca-40cc-9949-aef1f66ed3f4 - 9297 - odi_balls_model - STEP_START - Started execution of step "odi_balls_model".
+/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/statsmodels/discrete/discrete_model.py:3379: RuntimeWarning: divide by zero encountered in log
+  llf = coeff + size*np.log(prob) + endog*np.log(1-prob)
+/Users/arjunprakashrao/Drive/projects/Willow-MC/.venv/lib/python3.12/site-packages/statsmodels/discrete/discrete_model.py:3379: RuntimeWarning: invalid value encountered in multiply
+  llf = coeff + size*np.log(prob) + endog*np.log(1-prob)
+[32m2026-05-10 12:06:03 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5a6268f8-6eca-40cc-9949-aef1f66ed3f4 - 9297 - odi_balls_model - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
+[32m2026-05-10 12:06:03 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5a6268f8-6eca-40cc-9949-aef1f66ed3f4 - 9297 - odi_balls_model - ASSET_MATERIALIZATION - Materialized value odi_balls_model.
+[32m2026-05-10 12:06:03 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5a6268f8-6eca-40cc-9949-aef1f66ed3f4 - 9297 - odi_balls_model - STEP_SUCCESS - Finished execution of step "odi_balls_model" in 8.42s.

@@ -1,5 +1,0 @@
-[32m2026-04-24 14:56:10 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 3235d296-817e-409b-9641-03db39e20123 - 42113 - LOGS_CAPTURED - Started capturing logs in process (pid: 42113).
-[32m2026-04-24 14:56:10 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 3235d296-817e-409b-9641-03db39e20123 - 42113 - next_n_balls_features_t20 - STEP_START - Started execution of step "next_n_balls_features_t20".
-[32m2026-04-24 14:58:36 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 3235d296-817e-409b-9641-03db39e20123 - 42113 - next_n_balls_features_t20 - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
-[32m2026-04-24 14:58:36 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 3235d296-817e-409b-9641-03db39e20123 - 42113 - next_n_balls_features_t20 - ASSET_MATERIALIZATION - Materialized value next_n_balls_features_t20.
-[32m2026-04-24 14:58:36 +0100[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 3235d296-817e-409b-9641-03db39e20123 - 42113 - next_n_balls_features_t20 - STEP_SUCCESS - Finished execution of step "next_n_balls_features_t20" in 2m26s.
