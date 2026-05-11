@@ -14,3 +14,4 @@ dagster
 dagster-webserver
 duckdb
 dagster-duckdb
+streamlit
