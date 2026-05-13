@@ -209,8 +209,7 @@ __marimo__/
 data/
 *.parquet
 *.json
-!run_model_coeffs.json
-!wicket_model_coeffs.json
+!outputs/
 
 *.db
 *.ipynb
