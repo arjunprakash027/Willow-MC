@@ -62,6 +62,19 @@ class WinPredictor:
         alive = np.ones(n_sims, dtype=bool)
 
         while np.any(alive):
+            
+            # This check is done first to ensure we do not predict if there is no wickets or balls left in hand
+            dead_mask = (wickets[alive] >= 10) | (balls[alive] >= 120)
+            if target is not None:
+                dead_mask |= (scores[alive] >= target)
+            
+            # Update alive indices effectively
+            alive_indices = np.where(alive)[0]
+            alive[alive_indices[dead_mask]] = False
+
+            if not np.any(alive):
+                break
+            
             rr, rrr, overs_rem, wih, is_second = self.featurize(scores[alive], wickets[alive], balls[alive], target)
             mu = self.predict_mu(rr, rrr, overs_rem, wih, is_second, scores[alive])
             p_w = self.predict_p_wicket(rr, rrr, overs_rem, wih, is_second, scores[alive])
@@ -72,14 +85,6 @@ class WinPredictor:
             scores[alive] += runs
             wickets[alive] += wkts
             balls[alive] += 6
-
-            dead_mask = (wickets[alive] >= 10) | (balls[alive] >= 120)
-            if target is not None:
-                dead_mask |= (scores[alive] >= target)
-            
-            # Update alive indices effectively
-            alive_indices = np.where(alive)[0]
-            alive[alive_indices[dead_mask]] = False
 
         if target is None: 
             return np.mean(scores)
