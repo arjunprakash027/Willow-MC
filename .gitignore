@@ -208,8 +208,8 @@ __marimo__/
 ./notebooks
 data/
 *.parquet
-*.json
 !outputs/
+
 
 *.db
 *.ipynb
