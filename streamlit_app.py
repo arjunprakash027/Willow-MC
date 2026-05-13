@@ -3,17 +3,30 @@ import time
 import sys
 import os
 from src.predictor import WinPredictor
-from minimal_monitor import MatchState, RUN_MODEL, WICKET_MODEL
+from src.monitor_utils import (
+    MatchState, 
+    RUN_MODEL_IPL, WICKET_MODEL_IPL,
+    RUN_MODEL_T20, WICKET_MODEL_T20,
+    RUN_MODEL_ODI, WICKET_MODEL_ODI
+)
 
 st.set_page_config(page_title="Willow-MC Live", page_icon="🏏")
 
-st.title("🏏 Willow-MC Live Monitor")
+st.title("WillowMC Live Monitor")
 
 match_id = st.sidebar.text_input("Cricbuzz Match ID", value="100001")
+match_format = st.sidebar.selectbox("Match Format", ["IPL", "T20 International", "ODI"])
 n_sims = st.sidebar.number_input("Simulations", value=5000, step=1000)
 
 if st.sidebar.button("Start Tracking"):
-    predictor = WinPredictor(run_model_path=RUN_MODEL, wicket_model_path=WICKET_MODEL)
+    if match_format == "IPL":
+        rm, wm = RUN_MODEL_IPL, WICKET_MODEL_IPL
+    elif match_format == "T20 International":
+        rm, wm = RUN_MODEL_T20, WICKET_MODEL_T20
+    else:
+        rm, wm = RUN_MODEL_ODI, WICKET_MODEL_ODI
+
+    predictor = WinPredictor(run_model_path=rm, wicket_model_path=wm)
     match_state = MatchState(match_id)
     placeholder = st.empty()
 
@@ -25,6 +38,13 @@ if st.sidebar.button("Start Tracking"):
                 st.info(f"Connecting to Match {match_id}...")
             else:
                 st.header(f"{match_state.batting_team} vs {match_state.bowling_team}")
+                
+                cname1, cname2 = st.columns(2)
+
+                with cname1:
+                    st.write(f"Batting : {match_state.batting_team}")
+                with cname2:
+                    st.write(f"Bowling : {match_state.bowling_team}")
                 
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Score", f"{match_state.score}/{match_state.wickets}")
@@ -44,7 +64,11 @@ if st.sidebar.button("Start Tracking"):
                 with st.spinner("Simulating..."):
                     if match_state.target:
                         win_prob = predictor.simulate(state, n_sims=n_sims)
-                        st.metric("Win Probability", f"{round(win_prob * 100, 1)}%")
+                        st.metric(
+                            label=f"Win Probability for {match_state.batting_team}", 
+                            value=f"{round(win_prob * 100, 1)}%"
+                        )
+
                     else:
                         proj_score = predictor.simulate(state, n_sims=n_sims)
                         chase_state = {"score": 0, "wickets": 0, "balls": 0, "target": int(proj_score) + 1}
@@ -53,7 +77,12 @@ if st.sidebar.button("Start Tracking"):
                         
                         col_p1, col_p2 = st.columns(2)
                         col_p1.metric("Projected Score", int(proj_score))
-                        col_p2.metric("Win Probability", f"{round(win_prob * 100, 1)}%")
+
+                        col_p2.metric(
+                            label=f"Win Probability for {match_state.batting_team}", 
+                            value=f"{round(win_prob * 100, 1)}%"
+                        )
+
 
                 st.caption(f"Last updated: {match_state.last_updated}")
         
