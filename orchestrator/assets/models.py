@@ -6,6 +6,7 @@ from statsmodels.api import Logit
 import duckdb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score
+from lightgbm import LGBMClassifier
 import json
 import os
 
@@ -46,28 +47,39 @@ def train_wickets_model(duckdb: DuckDBResource, table_name: str, file_prefix: st
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    X_train = sm.add_constant(X_train)
-    X_test = sm.add_constant(X_test)
+    params = {'max_depth': 8,
+        'num_leaves': 56,
+        'min_child_samples': 118,
+        'subsample': 0.6827821817802229,
+        'colsample_bytree': 0.9634968128793103,
+        'n_estimators': 1921,
+        'learning_rate': 0.046621616348413115,
+        'min_gain_to_split': 0.2593050460541686,
+        'reg_alpha': 0.003326750254522071,
+        'reg_lambda': 1.812693851694228e-07,
+        'extra_trees': False
+        }
 
-    wicket_model = Logit(y_train, X_train).fit(disp=0)
+    wicket_model = LGBMClassifier(**params)
 
-    y_pred_prob = wicket_model.predict(X_test)
+    wicket_model.fit(X_train, y_train)
+
+    y_pred_prob = wicket_model.predict_proba(X_test)[:, 1]
     y_pred = (y_pred_prob > 0.5).astype(int)
 
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
 
-    wicket_coeffs = wicket_model.params.to_dict()
     os.makedirs("outputs", exist_ok=True)
-    with open(f"outputs/{file_prefix}_wicket_model_coeffs.json", "w") as f:
-        json.dump(wicket_coeffs, f)
+    model_path = f"outputs/{file_prefix}_wicket_model.txt"
+    wicket_model.booster_.save_model(model_path)
 
     return MaterializeResult(
         metadata={
             "precision": float(precision),
             "recall": float(recall),
             "sample_size": len(train_df),
-            "coefficients": MetadataValue.json(wicket_coeffs)
+            "model_path": model_path
         }
     )
 

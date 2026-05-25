@@ -105,7 +105,7 @@ def backtest_t20_model(context, duckdb: DuckDBResource):
         context,
         duckdb,
         "outputs/t20_int_run_model_coeffs.json",
-        "outputs/t20_int_wicket_model_coeffs.json",
+        "outputs/t20_int_wicket_model.txt",
         "t20_ball_by_ball"
     )
     
@@ -116,6 +116,6 @@ def backtest_ipl_model(context, duckdb: DuckDBResource):
         context,
         duckdb,
         "outputs/t20_ipl_run_model_coeffs.json",
-        "outputs/t20_ipl_wicket_model_coeffs.json",
+        "outputs/t20_ipl_wicket_model.txt",
         "ipl_ball_by_ball"
     )

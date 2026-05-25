@@ -4,13 +4,13 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Optional
 import json
+import lightgbm as lgb
 
 class WinPredictor:
     def __init__(self, run_model_path: str, wicket_model_path: str):
         with open(f"{run_model_path}") as f:
             self.run_coeffs = json.load(f)
-        with open(f"{wicket_model_path}") as f:
-            self.wicket_coeffs = json.load(f)
+        self.wicket_model = lgb.Booster(model_file=wicket_model_path)
 
     def predict_mu(self, rr, rrr, overs_rem, wih, is_second, score):
         z = (self.run_coeffs["const"] +
@@ -23,14 +23,8 @@ class WinPredictor:
         return np.exp(z)
 
     def predict_p_wicket(self, rr, rrr, overs_rem, wih, is_second, score):
-        z = (self.wicket_coeffs["const"] +
-             self.wicket_coeffs["rr"] * rr +
-             self.wicket_coeffs["required_run_rate"] * rrr +
-             self.wicket_coeffs["overs_remaining"] * overs_rem +
-             self.wicket_coeffs["wickets_in_hand"] * wih +
-             self.wicket_coeffs["is_second_innings"] * is_second +
-             self.wicket_coeffs["current_score"] * score)
-        return 1 / (1 + np.exp(-z))
+        features = np.column_stack([rr, rrr, wih, is_second, score, overs_rem])
+        return self.wicket_model.predict(features)
 
     def sample_runs(self, mu):
         alpha = self.run_coeffs["alpha"]

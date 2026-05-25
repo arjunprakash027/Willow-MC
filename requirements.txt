@@ -15,3 +15,5 @@ dagster-webserver
 duckdb
 dagster-duckdb
 streamlit
+lightgbm
+optuna
