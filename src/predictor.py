@@ -8,27 +8,24 @@ import lightgbm as lgb
 
 class WinPredictor:
     def __init__(self, run_model_path: str, wicket_model_path: str):
-        with open(f"{run_model_path}") as f:
-            self.run_coeffs = json.load(f)
+        self.run_model = lgb.Booster(model_file=run_model_path)
         self.wicket_model = lgb.Booster(model_file=wicket_model_path)
 
+        meta = run_model_path.replace("_model.txt","_meta.json")
+        with open(meta) as f:
+            meta = json.load(f)
+            self.alpha = meta.get("alpha")
+
     def predict_mu(self, rr, rrr, overs_rem, wih, is_second, score):
-        z = (self.run_coeffs["const"] +
-             self.run_coeffs["rr"] * rr +
-             self.run_coeffs["required_run_rate"] * rrr +
-             self.run_coeffs["overs_remaining"] * overs_rem +
-             self.run_coeffs["wickets_in_hand"] * wih +
-             self.run_coeffs["is_second_innings"] * is_second +
-             self.run_coeffs["current_score"] * score)
-        return np.exp(z)
+        features = np.column_stack([rr, rrr, wih, is_second, score, overs_rem])
+        return self.run_model.predict(features)
 
     def predict_p_wicket(self, rr, rrr, overs_rem, wih, is_second, score):
         features = np.column_stack([rr, rrr, wih, is_second, score, overs_rem])
         return self.wicket_model.predict(features)
 
     def sample_runs(self, mu):
-        alpha = self.run_coeffs["alpha"]
-        r = 1 / alpha
+        r = 1 / self.alpha
         p = r / (r + mu)
         return np.random.negative_binomial(r, p)
 

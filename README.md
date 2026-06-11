@@ -20,7 +20,7 @@ The system consists of three main components:
 The Monte Carlo engine relies on passing the current match state (Runs, Wickets, legal balls, target) into two core components that project individual ball outcomes:
 
 - **Run Generation (Negative Binomial)**: Generating the number of runs scored off an expected delivery is modeled as a Negative Binomial distribution. Features like Current Run Rate (CRR), Required Run Rate (RRR), and Wickets in Hand influence the `mu` (mean) and `alpha` dispersion parameters.
-- **Wicket Probability (Logistic Regression)**: The probability of a wicket falling on any given ball is calculated via a Logit link, scaling aggressively during high RRR chases or "death" over scenarios where teams must take immense risks.
+- **Wicket Probability (LightGBM)**: The probability of a wicket falling on any given ball is modeled using a LightGBM (`LGBMClassifier`) model. Features like Current Run Rate (CRR), Required Run Rate (RRR), Wickets in Hand, Current Score, and Innings are passed into a gradient-boosted decision tree classifier to capture non-linear relationships and thresholds, scaling aggressively during high RRR chases or "death" over scenarios where teams take immense risks.
 
 By sampling these distributions thousands of times (`n_sims=5000`), the engine produces a dense, converged probability of victory or projected 1st innings score.
 
@@ -53,7 +53,7 @@ Materialize the assets in the following order:
 1. **Bronze (`raw_data`)**: Pulls the master ball-by-ball datasets from Cricsheet.
 2. **Silver (`curate_dataset`)**: Parses chaotic JSONs and dumps them structured into DuckDB tables.
 3. **Gold (`next_n_balls_features_t20`)**: Computes contextual window metrics (features) per ball.
-4. **Modeling (`t20_balls_model` & `t20_wickets_model`)**: Fits the data via `statsmodels` to find optimal coefficients, which are persisted as `.json` files in the `outputs/` directory.
+4. **Modeling (`t20_balls_model` & `t20_wickets_model`)**: Fits the data. The runs model is trained via Negative Binomial regression (`statsmodels`) and saved as `.json` coefficient files; the wickets model is trained via LightGBM (`LGBMClassifier`) and saved as `.txt` booster files in the `outputs/` directory.
 
 ### 3. Backtesting
 You can execute the `backtesting` asset group directly from Dagster. 
@@ -86,3 +86,14 @@ Willow-MC/
 ├── requirements.txt         # Project runtime dependencies.
 └── README.md
 ```
+
+---
+
+## 📝 Changelog
+
+### v1.1.0 (2026-05-25)
+* **Wickets Model Upgrade**: Upgraded the modeling of wickets falling from a simple Logistic Regression (Logit link) model to a LightGBM Classifier (`LGBMClassifier`).
+* **Non-linear Interactions**: The LightGBM classifier captures complex, non-linear relationships and interactions between match state variables (such as wickets in hand, required run rate, current score, overs remaining, and innings).
+* **Export Format Update**: The trained wickets models (`t20`, `ipl`, and `odi`) are now exported as booster text files (`outputs/<prefix>_wicket_model.txt`) instead of JSON files.
+* **Simulator Integration**: Integrated `lightgbm.Booster` prediction capabilities into the stateless Monte Carlo simulator (`src/predictor.py`), enabling high-accuracy simulation runs.
+

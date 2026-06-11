@@ -5,8 +5,9 @@ import statsmodels.api as sm
 from statsmodels.api import Logit
 import duckdb
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_score, recall_score
-from lightgbm import LGBMClassifier
+from sklearn.metrics import precision_score, recall_score, mean_squared_error
+from lightgbm import LGBMClassifier, LGBMRegressor
+import lightgbm as lgb
 import json
 import os
 
@@ -15,24 +16,60 @@ FEATURES = ["rr", "required_run_rate", "wickets_in_hand", "is_second_innings", "
 def train_runs_model(duckdb: DuckDBResource, table_name: str, file_prefix: str):
     with duckdb.get_connection() as conn:
         train_df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
-        
-    X = train_df[FEATURES]
-    X = sm.add_constant(X)
-    y_runs = train_df["target_runs_next_n_balls"]
-
-    model_runs = sm.NegativeBinomial(y_runs, X).fit(disp=0)
     
-    run_coeffs = model_runs.params.to_dict()
+    train_df['is_second_innings'] = train_df['is_second_innings'].astype("category")
+    X = train_df[FEATURES]
+    y_runs = train_df["target_runs_next_n_balls"]
+    
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y_runs, test_size=0.2, random_state=42
+    )
+
+    run_model = LGBMRegressor(
+        objective="poisson",
+        boosting_type="gbdt",
+        max_depth=6,
+        num_leaves=31,
+        learning_rate=0.03,
+        n_estimators=1000,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=42,
+        verbose=-1
+    )
+    
+    run_model.fit(
+        X_train, y_train,
+        eval_set=[(X_val, y_val)],
+        callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]
+    )
+
+    mu_global = y_train.mean()
+    var_global = y_train.var()
+    alpha = max((var_global - mu_global) / (mu_global ** 2), 0.01) #dispersion parameter to be used in neg bin model
+
+    # saved seperately so can be used in neg bin model
+    meta = {
+        "alpha":alpha
+    }
+
     os.makedirs("outputs", exist_ok=True)
-    with open(f"outputs/{file_prefix}_run_model_coeffs.json", "w") as f:
-        json.dump(run_coeffs, f)
+    model_path = f"outputs/{file_prefix}_run_model.txt"
+    run_model.booster_.save_model(model_path)
+
+    meta_path = f"outputs/{file_prefix}_run_meta.json"
+    with open(meta_path, "w") as f:
+        json.dump(meta,f)
+
+    val_preds = run_model.predict(X_val)
+    rmse = float(mean_squared_error(y_val, val_preds, squared=False))
 
     return MaterializeResult(
         metadata={
-            "aic": float(model_runs.aic),
-            "log_likelihood": float(model_runs.llf),
+            "val_rmse": rmse,
             "sample_size": len(train_df),
-            "coefficients": MetadataValue.json(run_coeffs)
+            "calculated_alpha": float(alpha),
+            "model_path": model_path
         }
     )
 
