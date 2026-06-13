@@ -1,9 +1,5 @@
-import pandas as pd
-from dagster import asset, MaterializeResult, MetadataValue
+from dagster import asset, MaterializeResult
 from dagster_duckdb import DuckDBResource
-import statsmodels.api as sm
-from statsmodels.api import Logit
-import duckdb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, root_mean_squared_error
 from lightgbm import LGBMClassifier, LGBMRegressor

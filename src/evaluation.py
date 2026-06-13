@@ -14,7 +14,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from src.predictor import WinPredictor
+from src.predictor import WinPredictor  # noqa: E402
 
 def select_matches_for_backtest(db_path: str, dataset: str, n_matches: int = 100, random_state: int = 42) -> List[str]:
     """
@@ -47,7 +47,6 @@ def single_match_prediction(df: pd.DataFrame, predictor: WinPredictor) -> Dict:
     if df.empty:
         return {}
 
-    in1_final = df[df['innings'] == 1]['final_total'].iloc[0]
     in2_final = df[df['innings'] == 2]['final_total'].iloc[0]
     target = df[df['innings'] == 2]['target_total'].iloc[0]
     team2_won = 1 if in2_final >= target else 0

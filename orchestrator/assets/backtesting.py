@@ -7,7 +7,7 @@ project_root = os.path.abspath(os.path.join(os.getcwd(), '..'))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from src.evaluation import evaluate_model
+from src.evaluation import evaluate_model  # noqa: E402
 
 def backtest_models(context, duckdb: DuckDBResource, run_model_path: str, wicket_model_path: str, dataset: str):
     # Retrieve the database path configured in the DuckDB resource

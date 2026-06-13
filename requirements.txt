@@ -17,3 +17,4 @@ dagster-duckdb
 streamlit
 lightgbm
 optuna
+ruff
