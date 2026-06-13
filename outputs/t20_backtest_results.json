@@ -1,0 +1,14 @@
+{
+    "dataset": "t20_ball_by_ball",
+    "total_matches_tested": 100,
+    "run_model": "outputs/t20_int_run_model.txt",
+    "wicket_model": "outputs/t20_int_wicket_model.txt",
+    "average_errors": {
+        "First Innings powerplay": 0.2957870745910639,
+        "First Innings middle": 0.27585468012795333,
+        "First Innings death": 0.23610911619750685,
+        "Second Innings powerplay": 0.16745401750809707,
+        "Second Innings middle": 0.12708759696542904,
+        "Second Innings death": 0.071265429645458
+    }
+}

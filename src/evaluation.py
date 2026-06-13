@@ -1,4 +1,10 @@
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import sys
 import json
 import argparse
@@ -40,16 +46,10 @@ def select_matches_for_backtest(db_path: str, dataset: str, n_matches: int = 100
         
     return matches['match_id'].sample(n=n_matches, random_state=random_state).tolist()
 
-def single_match_prediction(db_path: str, match_id: str, predictor: WinPredictor, dataset: str) -> Dict:
+def single_match_prediction(df: pd.DataFrame, predictor: WinPredictor) -> Dict:
     """
     Simulate ball-by-ball predictions for a single match and compute squared errors per phase.
     """
-    conn = duckdb.connect(db_path, read_only=True)
-    try:
-        df = conn.execute(f"SELECT * FROM {dataset} WHERE match_id = ?", [match_id]).fetchdf()
-    finally:
-        conn.close()
-        
     if df.empty:
         return {}
 
@@ -115,9 +115,25 @@ def evaluate_model(db_path: str, run_model_path: str, wicket_model_path: str, da
     if not matches:
         raise ValueError(f"No valid matches found in table '{dataset}' to run backtest.")
         
-    results = Parallel(n_jobs=4, prefer='threads')(
-        delayed(single_match_prediction)(db_path, match_id, predictor, dataset) 
-        for match_id in tqdm(matches, desc=f"Backtesting {dataset}")
+    # Query all data for the selected matches in a single call to remove connection overhead inside loop
+    conn = duckdb.connect(db_path, read_only=True)
+    try:
+        placeholders = ",".join(["?"] * len(matches))
+        query = f"SELECT * FROM {dataset} WHERE match_id IN ({placeholders})"
+        all_data_df = conn.execute(query, matches).fetchdf()
+    finally:
+        conn.close()
+        
+    if all_data_df.empty:
+        raise ValueError("No data returned from database for selected matches.")
+        
+    # Group by match_id to prepare separate dataframes for each match prediction
+    match_dfs = [group for _, group in all_data_df.groupby("match_id")]
+    
+    # Run process-based parallelism to bypass the GIL and utilize multiple cores
+    results = Parallel(n_jobs=4, prefer='processes')(
+        delayed(single_match_prediction)(match_df, predictor) 
+        for match_df in tqdm(match_dfs, desc=f"Backtesting {dataset}")
     )
     
     results = [r for r in results if r]
@@ -164,7 +180,7 @@ def main():
             run_model_path=args.run_model,
             wicket_model_path=args.wicket_model,
             dataset=args.dataset,
-            n_matches=args.n-matches if hasattr(args, 'n-matches') else args.n_matches,
+            n_matches=args.n_matches,
             output_path=args.output_json,
             random_state=args.random_state
         )
