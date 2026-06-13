@@ -5,7 +5,7 @@ import statsmodels.api as sm
 from statsmodels.api import Logit
 import duckdb
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_score, recall_score, mean_squared_error
+from sklearn.metrics import precision_score, recall_score, root_mean_squared_error
 from lightgbm import LGBMClassifier, LGBMRegressor
 import lightgbm as lgb
 import json
@@ -62,7 +62,7 @@ def train_runs_model(duckdb: DuckDBResource, table_name: str, file_prefix: str):
         json.dump(meta,f)
 
     val_preds = run_model.predict(X_val)
-    rmse = float(mean_squared_error(y_val, val_preds, squared=False))
+    rmse = float(root_mean_squared_error(y_val, val_preds))
 
     return MaterializeResult(
         metadata={
