@@ -1,10 +1,4 @@
 import os
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-
 import sys
 import json
 import argparse
@@ -131,7 +125,7 @@ def evaluate_model(db_path: str, run_model_path: str, wicket_model_path: str, da
     match_dfs = [group for _, group in all_data_df.groupby("match_id")]
     
     # Run process-based parallelism to bypass the GIL and utilize multiple cores
-    results = Parallel(n_jobs=4, prefer='processes')(
+    results = Parallel(n_jobs=-1, prefer='processes')(
         delayed(single_match_prediction)(match_df, predictor) 
         for match_df in tqdm(match_dfs, desc=f"Backtesting {dataset}")
     )
