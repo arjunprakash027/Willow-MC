@@ -27,9 +27,16 @@ You are a senior data and systems engineer specializing in orchestrating ML pipe
 ## 5. Script & Output Rules
 - **No Placeholders:** Never use comments like `# TODO` or `# implement later` in production code. Provide fully working implementations.
 - **Conciseness:** Keep code elegant, neat, and highly structured. Avoid deep nesting and redundant abstractions.
+- **README Updates:** Always update `README.md` to reflect the latest state of the repository, including additions of scripts, models, assets, or database schema updates.
 
 ## 6. Pre-Push Verification Checklist
 Before completing tasks or pushing code changes, you must verify the changes by running the verification suite:
 - **Pipeline Check:** Run `bash scripts/run_pipeline.sh` to ensure the entire Dagster asset workspace materializes cleanly without error.
 - **Evaluation/Backtesting Check:** Run `bash scripts/backtest.sh` to verify that model performance backtests execute successfully and write metrics to outputs.
 - **Linting Check:** Run linters against the codebase to ensure there are no formatting anomalies or unused imports.
+
+## 7. Versioning & Release Rules
+We adhere to Semantic Versioning (SemVer) guidelines (`MAJOR.MINOR.PATCH`). Bump version descriptors in `README.md` under the following conditions:
+- **PATCH (`0.0.+1`):** For backward-compatible bug fixes, optimizations, documentation updates, and dependency/linter updates.
+- **MINOR (`0.+1.0`):** For backward-compatible new assets, new datasets (e.g., adding a new format like Test matches), or new feature definitions.
+- **MAJOR (`+1.0.0`):** For backward-incompatible changes (e.g., breaking transformations to the raw database tables, replacing LightGBM with another engine, or breaking interface endpoints used by downstream Streamlit/frontend apps).

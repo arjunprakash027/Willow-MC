@@ -56,15 +56,21 @@ Materialize the assets in the following order:
 4. **Modeling (`t20_balls_model` & `t20_wickets_model`)**: Fits the data. The runs model is trained via Negative Binomial regression (`statsmodels`) and saved as `.json` coefficient files; the wickets model is trained via LightGBM (`LGBMClassifier`) and saved as `.txt` booster files in the `outputs/` directory.
 
 ### 3. Backtesting
-You can execute the `backtesting` asset group directly from Dagster. 
-This utilizes `joblib.Parallel` utilizing threads to massively sample historical DuckDB matches. It computes the **Mean Squared Error (MSE)** dynamically across the 6 major phases of a T20 Match:
+You can execute the backtests in two ways:
+* **Standalone CLI (Fast - Optimized):** Runs the backtesting simulation loop externally bypassing the GIL and using in-memory pre-fetching. Run:
+  ```bash
+  bash scripts/backtest.sh
+  ```
+  This will execute the evaluation for both IPL and T20 datasets and dump results to `outputs/`.
+* **Dagster Pipeline:** You can execute the `backtesting` asset group directly from the Dagster webserver, which delegates to the same optimized evaluation core.
+
+It computes the **Mean Squared Error (MSE)** dynamically across the 6 major phases of a match:
 - **First Innings**: Powerplay (1-6), Middle (7-15), Death (16-20)
 - **Second Innings**: Powerplay (1-6), Middle (7-15), Death (16-20)
 
 ### 4. Real-time Live Monitor
 Once your models are built and generated in the `outputs/` folder, run the live probability monitor against an ongoing match. You will need the Cricbuzz match ID (found in their URL):
 ```bash
-# Example: python minimal_monitor.py <match_id>
 python minimal_monitor.py 100001
 ```
 
@@ -75,21 +81,33 @@ python minimal_monitor.py 100001
 ```text
 Willow-MC/
 ├── src/
-│   └── predictor.py         # The core Monte Carlo class `WinPredictor`. Decoupled from any live API.
+│   ├── predictor.py         # The core Monte Carlo class `WinPredictor`. Decoupled from any live API.
+│   └── evaluation.py        # Optimized, standalone model backtesting core and CLI parser.
 ├── orchestrator/
 │   ├── assets/              # Dagster modular assets for modeling, features, and backtesting.
 │   └── __init__.py          # Definition of Dagster jobs/schedules.
+├── scripts/
+│   ├── run_pipeline.sh      # Shell wrapper to materialize the pipeline once via CLI.
+│   └── backtest.sh          # Shell wrapper to run standalone optimized backtests.
 ├── notebooks/               # Jupyter workbooks for exploratory analysis and ad-hoc queries.
 ├── data/                    # Local embedded DB files (willow.db via DuckDB).
-├── outputs/                 # Exported JSON model coefficients required by the predictor.
+├── outputs/                 # Exported JSON/txt model files and backtest evaluation results.
 ├── minimal_monitor.py       # Live match tracking CLI. Polling Cricbuzz state -> `WinPredictor`.
-├── requirements.txt         # Project runtime dependencies.
+├── requirements.txt         # Project runtime dependencies (includes ruff for linting).
 └── README.md
 ```
 
 ---
 
 ## 📝 Changelog
+
+### v1.2.0 (2026-06-13)
+* **Modular Evaluation Script (`src/evaluation.py`)**: Separated backtesting math and execution loops from Dagster assets. Created a CLI interface to allow running evaluations standalone.
+* **Performance Optimization (~3x Speedup)**:
+  * Switched from thread-based to process-based parallelism (`prefer='processes'`, `n_jobs=-1`) to bypass Python's GIL.
+  * Implemented in-memory data pre-fetching in the parent process, eliminating database connection overhead inside parallel processes.
+* **Execution Wrappers**: Added helper scripts `scripts/run_pipeline.sh` and `scripts/backtest.sh` for fast CLI invocation.
+* **Linting & Code Quality**: Added `ruff` to project requirements and ran code-quality fixes across all modified python assets.
 
 ### v1.1.0 (2026-05-25)
 * **Wickets Model Upgrade**: Upgraded the modeling of wickets falling from a simple Logistic Regression (Logit link) model to a LightGBM Classifier (`LGBMClassifier`).
