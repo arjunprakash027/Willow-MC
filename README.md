@@ -101,6 +101,10 @@ Willow-MC/
 
 ## 📝 Changelog
 
+### v1.3.0 (2026-06-15)
+* **Dynamic Live Match Selector**: Implemented dynamic live match scraping from Cricbuzz, allowing selection of ongoing IPL, T20, and ODI matches directly from the Streamlit sidebar.
+* **Cached Session State**: Integrated match fetching with Streamlit session state and added a manual refresh button to prevent redundant network requests and avoid IP blocks.
+
 ### v1.2.0 (2026-06-13)
 * **Modular Evaluation Script (`src/evaluation.py`)**: Separated backtesting math and execution loops from Dagster assets. Created a CLI interface to allow running evaluations standalone.
 * **Performance Optimization (~3x Speedup)**:
