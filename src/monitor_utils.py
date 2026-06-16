@@ -38,25 +38,38 @@ class MatchState:
     last_updated: str = ""
 
     def update(self):
+        url = f"https://www.cricbuzz.com/api/mcenter/comm/{self.match_id}"
+        print(
+            f"[MatchState] Connecting to Match ID {self.match_id} (fetching URL: {url})..."
+        )
         try:
-            r = requests.get(
-                f"https://www.cricbuzz.com/api/mcenter/comm/{self.match_id}",
-                headers=HEADERS,
-                timeout=5,
-            )
+            r = requests.get(url, headers=HEADERS, timeout=5)
+            print(f"[MatchState] HTTP status: {r.status_code}")
+            r.raise_for_status()
             data = r.json()
-        except Exception:
+        except Exception as e:
+            print(f"[MatchState] Connection or parsing failed: {e}")
             return
         header = data.get("matchHeader", {})
+        t1, t2 = header.get("team1", {}), header.get("team2", {})
+        self.team1, self.team2 = t1.get("name", ""), t2.get("name", "")
+        self.status = header.get("status", "")
+
         mini = data.get("miniscore", {})
         if not mini:
+            print(
+                f"[MatchState] Warning: 'miniscore' key is empty or missing from response. Match State: {header.get('state', 'Unknown')}, Status: {self.status}"
+            )
+            self.batting_team = ""
+            self.bowling_team = ""
             return
-        t1, t2 = header.get("team1", {}), header.get("team2", {})
+
         bat_id = mini.get("batTeam", {}).get("teamId")
-        self.team1, self.team2 = t1.get("name", ""), t2.get("name", "")
         self.batting_team = t1.get("name") if t1.get("id") == bat_id else t2.get("name")
         self.bowling_team = t2.get("name") if t1.get("id") == bat_id else t1.get("name")
-        self.status = header.get("status", "")
+        print(
+            f"[MatchState] Connected! Batting team: {self.batting_team}, Bowling team: {self.bowling_team}"
+        )
         inn = mini.get("matchScoreDetails", {}).get("inningsScoreList", [])
         curr = inn[-1] if inn else {}
         self.score, self.wickets, self.overs = (
@@ -69,6 +82,9 @@ class MatchState:
         if not self.target and len(inn) >= 2:
             self.target = inn[0].get("score", 0) + 1
         self.last_updated = time.strftime("%H:%M:%S")
+        print(
+            f"[MatchState] Update complete. Score: {self.score}/{self.wickets} in {self.overs} overs. Target: {self.target}"
+        )
 
 
 def fetch_live_matches() -> list[dict[str, str]]:
@@ -82,14 +98,22 @@ def fetch_live_matches() -> list[dict[str, str]]:
         if r.status_code != 200:
             return []
         a_tags = re.findall(
-            r'href="/(live-cricket-scores|cricket-scores)/(\d+)/([^"]*)"', r.text
+            r'(<a\s+[^>]*href="/(live-cricket-scores|cricket-scores)/(\d+)/([^"]*)"[^>]*>)',
+            r.text,
         )
         seen: set[str] = set()
         matches: list[dict[str, str]] = []
-        for _, match_id, slug in a_tags:
+        for full_tag, _, match_id, slug in a_tags:
             if match_id in seen:
                 continue
             seen.add(match_id)
+
+            title_match = re.search(r'title="([^"]*)"', full_tag)
+            if title_match:
+                title = title_match.group(1).lower()
+                if "preview" in title or "upcoming" in title:
+                    continue
+
             parts = slug.split("-vs-")
             if len(parts) != 2:
                 continue

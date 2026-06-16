@@ -66,7 +66,12 @@ if st.sidebar.button("Start Tracking"):
 
         with placeholder.container():
             if not match_state.batting_team:
-                st.info(f"Connecting to Match {match_id}...")
+                if match_state.team1 and match_state.team2:
+                    st.info(f"Match: {match_state.team1} vs {match_state.team2}")
+                    st.warning(f"Status: {match_state.status}")
+                    st.caption("Waiting for live score details to become available...")
+                else:
+                    st.info(f"Connecting to Match {match_id}...")
             else:
                 st.header(f"{match_state.batting_team} vs {match_state.bowling_team}")
 
