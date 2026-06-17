@@ -102,7 +102,8 @@ def evaluate_model(db_path: str, run_model_path: str, wicket_model_path: str, da
     """
     Run backtesting evaluation on selected matches and compute overall average errors.
     """
-    predictor = WinPredictor(run_model_path=run_model_path, wicket_model_path=wicket_model_path)
+    max_balls = 300 if 'odi' in dataset.lower() else 120
+    predictor = WinPredictor(run_model_path=run_model_path, wicket_model_path=wicket_model_path, max_balls=max_balls)
     matches = select_matches_for_backtest(db_path, dataset=dataset, n_matches=n_matches, random_state=random_state)
     
     if not matches:

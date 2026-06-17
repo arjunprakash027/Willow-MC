@@ -52,12 +52,15 @@ else:
 if st.sidebar.button("Start Tracking"):
     if match_format == "IPL":
         rm, wm = RUN_MODEL_IPL, WICKET_MODEL_IPL
+        max_balls = 120
     elif match_format == "T20 International":
         rm, wm = RUN_MODEL_T20, WICKET_MODEL_T20
+        max_balls = 120
     else:
         rm, wm = RUN_MODEL_ODI, WICKET_MODEL_ODI
+        max_balls = 300
 
-    predictor = WinPredictor(run_model_path=rm, wicket_model_path=wm)
+    predictor = WinPredictor(run_model_path=rm, wicket_model_path=wm, max_balls=max_balls)
     match_state = MatchState(match_id)
     placeholder = st.empty()
 

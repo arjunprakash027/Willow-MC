@@ -7,9 +7,10 @@ import json
 import lightgbm as lgb
 
 class WinPredictor:
-    def __init__(self, run_model_path: str, wicket_model_path: str):
+    def __init__(self, run_model_path: str, wicket_model_path: str, max_balls: int = 120):
         self.run_model = lgb.Booster(model_file=run_model_path)
         self.wicket_model = lgb.Booster(model_file=wicket_model_path)
+        self.max_balls = max_balls
 
         meta = run_model_path.replace("_model.txt","_meta.json")
         with open(meta) as f:
@@ -33,11 +34,11 @@ class WinPredictor:
         legal_balls = np.maximum(balls, 1)
         rr = scores / legal_balls * 6
         wih = 10 - wickets
-        overs_rem = (120 - balls) / 6
+        overs_rem = (self.max_balls - balls) / 6
         
         if target is not None:
             runs_rem = np.maximum(target - scores, 0)
-            balls_rem = np.maximum(120 - balls, 1)
+            balls_rem = np.maximum(self.max_balls - balls, 1)
             rrr = runs_rem / balls_rem * 6
             is_second = np.ones_like(scores)
         else:
@@ -55,7 +56,7 @@ class WinPredictor:
         while np.any(alive):
             
             # This check is done first to ensure we do not predict if there is no wickets or balls left in hand
-            dead_mask = (wickets[alive] >= 10) | (balls[alive] >= 120)
+            dead_mask = (wickets[alive] >= 10) | (balls[alive] >= self.max_balls)
             if target is not None:
                 dead_mask |= (scores[alive] >= target)
             
