@@ -4,11 +4,11 @@
     "run_model": "outputs/t20_ipl_run_model.txt",
     "wicket_model": "outputs/t20_ipl_wicket_model.txt",
     "average_errors": {
-        "First Innings powerplay": 0.28111254115879764,
-        "First Innings middle": 0.24501108462282417,
-        "First Innings death": 0.2181566803348722,
-        "Second Innings powerplay": 0.14289982336393015,
-        "Second Innings middle": 0.0988900056876434,
-        "Second Innings death": 0.07649878367206611
+        "First Innings powerplay": 0.26444440115983825,
+        "First Innings middle": 0.23612327400575045,
+        "First Innings death": 0.2211952337832276,
+        "Second Innings powerplay": 0.17789154668124074,
+        "Second Innings middle": 0.1487845779032572,
+        "Second Innings death": 0.10381904436126924
     }
 }
